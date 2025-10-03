@@ -1,3 +1,10 @@
+/*
+ * @Author: Cuersy 
+ * @Date: 2025-10-03 20:19:45 
+ * @Last Modified by:   Cuersy 
+ * @Last Modified time: 2025-10-03 20:19:45 
+ */
+
 const WEBSOCKET = require("ws");
 const CRYPTO = require("crypto");
 const READLINE = require("readline");
