@@ -1,0 +1,710 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E2EE Chat Client</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .message-bubble {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .status-dot {
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 min-h-screen">
+    <div id="app" class="container mx-auto px-4 py-8 max-w-6xl">
+        <div id="loginScreen" class="flex items-center justify-center min-h-screen">
+            <div class="bg-slate-800/50 backdrop-blur-lg rounded-2xl shadow-2xl p-8 w-full max-w-md border border-slate-700">
+                <div class="text-center mb-8">
+                    <h1 class="text-4xl font-bold text-white mb-2">E2EE Chat</h1>
+                    <p class="text-slate-400">End-to-End Encrypted Messaging</p>
+                </div>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Username</label>
+                        <input type="text" id="usernameInput" 
+                            class="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            placeholder="Enter your username" minlength="3" maxlength="32">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">WebSocket Server</label>
+                        <input type="text" id="serverInput" 
+                            class="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            value="ws://localhost:8080" placeholder="ws://localhost:8080">
+                    </div>
+                    
+                    <button id="connectBtn" 
+                        class="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-slate-800">
+                        Connect
+                    </button>
+                </div>
+                
+                <div id="loginStatus" class="mt-4 text-center text-sm"></div>
+            </div>
+        </div>
+
+        <div id="chatScreen" class="hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-8rem)]">
+                <div class="bg-slate-800/50 backdrop-blur-lg rounded-2xl shadow-2xl border border-slate-700 p-6 overflow-y-auto">
+                    <div class="mb-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-xl font-bold text-white">Profile</h2>
+                            <div class="flex items-center space-x-2">
+                                <div class="status-dot w-3 h-3 bg-green-500 rounded-full"></div>
+                                <span class="text-sm text-slate-400">Online</span>
+                            </div>
+                        </div>
+                        <div class="bg-slate-700/50 rounded-lg p-4 space-y-2">
+                            <p class="text-white font-semibold" id="currentUsername"></p>
+                            <p class="text-xs text-slate-400 break-all" id="currentUserId"></p>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold text-white mb-3">New Chat</h3>
+                        <div class="space-y-2">
+                            <input type="text" id="recipientIdInput" 
+                                class="w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                placeholder="Recipient User ID">
+                            <button id="startChatBtn" 
+                                class="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg transition-colors">
+                                Start Chat
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-lg font-semibold text-white mb-3">Active Chats</h3>
+                        <div id="chatList" class="space-y-2"></div>
+                    </div>
+                    
+                    <button id="disconnectBtn" 
+                        class="w-full mt-6 bg-red-600/20 hover:bg-red-600/30 text-red-400 font-medium py-2 px-4 rounded-lg transition-colors border border-red-600/30">
+                        Disconnect
+                    </button>
+                </div>
+
+                <div class="lg:col-span-2 bg-slate-800/50 backdrop-blur-lg rounded-2xl shadow-2xl border border-slate-700 flex flex-col">
+                    <div class="p-6 border-b border-slate-700">
+                        <div id="chatHeader" class="text-center text-slate-400">
+                            Select a chat to start messaging
+                        </div>
+                    </div>
+
+                    <div id="messagesContainer" class="flex-1 p-6 overflow-y-auto space-y-4"></div>
+
+                    <div class="p-6 border-t border-slate-700">
+                        <div class="flex space-x-3">
+                            <input type="text" id="messageInput" 
+                                class="flex-1 px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                placeholder="Type a message..." disabled>
+                            <button id="sendBtn" 
+                                class="bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled>
+                                Send
+                            </button>
+                        </div>
+                        <div id="messageStatus" class="mt-2 text-xs text-slate-400 text-center"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /*
+ * @Author: Cuersy 
+ * @Date: 2025-10-03 18:24:15 
+ * @Last Modified by:   Cuersy 
+ * @Last Modified time: 2025-10-03 18:24:15 
+ */
+        let websocket = null;
+        let session = {
+            sessionid: null,
+            userid: null,
+            username: null,
+            publickey: null,
+            privatekey: null,
+            peerid: null
+        };
+        let currentrecipient = null;
+        let chats = {};
+        let recipientkeys = {};
+
+        const loginscreen = document.getElementById('loginScreen');
+        const chatscreen = document.getElementById('chatScreen');
+        const usernameinput = document.getElementById('usernameInput');
+        const serverinput = document.getElementById('serverInput');
+        const connectbtn = document.getElementById('connectBtn');
+        const loginstatus = document.getElementById('loginStatus');
+        const currentusername = document.getElementById('currentUsername');
+        const currentuserid = document.getElementById('currentUserId');
+        const recipientidinput = document.getElementById('recipientIdInput');
+        const startchatbtn = document.getElementById('startChatBtn');
+        const chatlist = document.getElementById('chatList');
+        const chatheader = document.getElementById('chatHeader');
+        const messagescontainer = document.getElementById('messagesContainer');
+        const messageinput = document.getElementById('messageInput');
+        const sendbtn = document.getElementById('sendBtn');
+        const messagestatus = document.getElementById('messageStatus');
+        const disconnectbtn = document.getElementById('disconnectBtn');
+
+        async function generatekeypair() {
+            const keypair = await window.crypto.subtle.generateKey(
+                {
+                    name: "RSA-OAEP",
+                    modulusLength: 4096,
+                    publicExponent: new Uint8Array([1, 0, 1]),
+                    hash: "SHA-256"
+                },
+                true,
+                ["encrypt", "decrypt"]
+            );
+            
+            session.publickey = await window.crypto.subtle.exportKey("spki", keypair.publicKey);
+            session.privatekey = keypair.privateKey;
+            session.peerid = arrayBufferToHex(await window.crypto.subtle.digest("SHA-256", session.publickey));
+        }
+
+        function arrayBufferToBase64(buffer) {
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return btoa(binary);
+        }
+
+        function base64ToArrayBuffer(base64) {
+            const binary = atob(base64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        function arrayBufferToHex(buffer) {
+            return Array.from(new Uint8Array(buffer))
+                .map(b => b.toString(16).padStart(2, '0'))
+                .join('');
+        }
+
+        function publickeytopem(publickey) {
+            const b64 = arrayBufferToBase64(publickey);
+            return `-----BEGIN PUBLIC KEY-----\n${b64.match(/.{1,64}/g).join('\n')}\n-----END PUBLIC KEY-----`;
+        }
+
+        async function encryptmessage(message, recipientpublickey) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(message);
+            
+            const aeskey = await window.crypto.subtle.generateKey(
+                { name: "AES-GCM", length: 256 },
+                true,
+                ["encrypt", "decrypt"]
+            );
+            
+            const iv = window.crypto.getRandomValues(new Uint8Array(12));
+            const encrypteddata = await window.crypto.subtle.encrypt(
+                { name: "AES-GCM", iv: iv },
+                aeskey,
+                data
+            );
+            
+            const exportedaeskey = await window.crypto.subtle.exportKey("raw", aeskey);
+            
+            const pemkey = recipientpublickey.replace(/-----BEGIN PUBLIC KEY-----|-----END PUBLIC KEY-----|\n/g, '');
+            const binarykey = base64ToArrayBuffer(pemkey);
+            
+            const importedkey = await window.crypto.subtle.importKey(
+                "spki",
+                binarykey,
+                { name: "RSA-OAEP", hash: "SHA-256" },
+                true,
+                ["encrypt"]
+            );
+            
+            const encryptedaeskey = await window.crypto.subtle.encrypt(
+                { name: "RSA-OAEP" },
+                importedkey,
+                exportedaeskey
+            );
+            
+            return {
+                encryptedkey: arrayBufferToBase64(encryptedaeskey),
+                iv: arrayBufferToBase64(iv),
+                ciphertext: arrayBufferToBase64(encrypteddata)
+            };
+        }
+
+        async function decryptmessage(encryptedpackage) {
+            try {
+                const encryptedaeskey = base64ToArrayBuffer(encryptedpackage.encryptedkey);
+                const iv = base64ToArrayBuffer(encryptedpackage.iv);
+                const ciphertext = base64ToArrayBuffer(encryptedpackage.ciphertext);
+                
+                const decryptedaeskey = await window.crypto.subtle.decrypt(
+                    { name: "RSA-OAEP" },
+                    session.privatekey,
+                    encryptedaeskey
+                );
+                
+                const aeskey = await window.crypto.subtle.importKey(
+                    "raw",
+                    decryptedaeskey,
+                    { name: "AES-GCM" },
+                    true,
+                    ["decrypt"]
+                );
+                
+                const decrypteddata = await window.crypto.subtle.decrypt(
+                    { name: "AES-GCM", iv: iv },
+                    aeskey,
+                    ciphertext
+                );
+                
+                const decoder = new TextDecoder();
+                return decoder.decode(decrypteddata);
+            } catch (error) {
+                console.error('Decryption error:', error);
+                throw error;
+            }
+        }
+
+        function sendmessage(type, data) {
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                websocket.send(JSON.stringify({
+                    TYPE: type,
+                    DATA: data,
+                    TIMESTAMP: Date.now()
+                }));
+            }
+        }
+
+        function showstatus(message, isError = false) {
+            loginstatus.textContent = message;
+            loginstatus.className = `mt-4 text-center text-sm ${isError ? 'text-red-400' : 'text-green-400'}`;
+        }
+
+        function addmessagetochat(recipientid, message, issent, timestamp) {
+            if (!chats[recipientid]) {
+                chats[recipientid] = [];
+            }
+            
+            chats[recipientid].push({
+                content: message,
+                issent: issent,
+                timestamp: timestamp || Date.now()
+            });
+            
+            if (currentrecipient === recipientid) {
+                displaymessages();
+            }
+            
+            updatechatlist();
+        }
+
+        function displaymessages() {
+            messagescontainer.innerHTML = '';
+            
+            if (!currentrecipient || !chats[currentrecipient]) {
+                return;
+            }
+            
+            const messages = chats[currentrecipient];
+            
+            messages.forEach(msg => {
+                const messagediv = document.createElement('div');
+                messagediv.className = `message-bubble flex ${msg.issent ? 'justify-end' : 'justify-start'}`;
+                
+                const bubble = document.createElement('div');
+                bubble.className = `max-w-xs lg:max-w-md px-4 py-3 rounded-2xl ${
+                    msg.issent 
+                        ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white' 
+                        : 'bg-slate-700 text-white'
+                }`;
+                
+                const content = document.createElement('p');
+                content.textContent = msg.content;
+                bubble.appendChild(content);
+                
+                const time = document.createElement('p');
+                time.className = 'text-xs mt-1 opacity-70';
+                time.textContent = new Date(msg.timestamp).toLocaleTimeString();
+                bubble.appendChild(time);
+                
+                messagediv.appendChild(bubble);
+                messagescontainer.appendChild(messagediv);
+            });
+            
+            messagescontainer.scrollTop = messagescontainer.scrollHeight;
+        }
+
+        function updatechatlist() {
+            chatlist.innerHTML = '';
+            
+            Object.keys(chats).forEach(recipientid => {
+                const chatbutton = document.createElement('button');
+                chatbutton.className = `w-full text-left px-4 py-3 rounded-lg transition-colors ${
+                    currentrecipient === recipientid 
+                        ? 'bg-purple-600 text-white' 
+                        : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+                }`;
+                
+                const title = document.createElement('p');
+                title.className = 'font-medium text-sm truncate';
+                title.textContent = recipientid.substring(0, 16) + '...';
+                chatbutton.appendChild(title);
+                
+                const messagecount = chats[recipientid].length;
+                const subtitle = document.createElement('p');
+                subtitle.className = 'text-xs opacity-70 mt-1';
+                subtitle.textContent = `${messagecount} messages`;
+                chatbutton.appendChild(subtitle);
+                
+                chatbutton.onclick = () => selectchat(recipientid);
+                chatlist.appendChild(chatbutton);
+            });
+        }
+        async function HANDLE_USER_PUBLIC_KEY(data){
+            const userid = data.USER_ID;
+            const publickey = data.PUBLIC_KEY;
+            if (userid && publickey) {
+                recipientkeys[userid] = publickey;
+                console.log('Received and saved public key for user:', userid);
+            }
+        }
+        function selectchat(recipientid) {
+            currentrecipient = recipientid;
+            chatheader.innerHTML = `
+                <div>
+                    <p class="text-white font-semibold">Chat with</p>
+                    <p class="text-xs text-slate-400 break-all">${recipientid}</p>
+                </div>
+            `;
+            messageinput.disabled = false;
+            sendbtn.disabled = false;
+            displaymessages();
+            updatechatlist();
+        }
+
+        async function handlemessage(event) {
+            try {
+                const msg = JSON.parse(event.data);
+                console.log('Received message:', msg.TYPE);
+                
+                switch (msg.TYPE) {
+                    case 'HANDSHAKE':
+                        await handlehandshake(msg.DATA);
+                        break;
+                    case 'AUTHENTICATED':
+                        handleauthenticated(msg.DATA);
+                        break;
+                    case 'MESSAGE':
+                        await handleincomingmessage(msg.DATA);
+                        break;
+                    case 'DELIVERY_CONFIRMATION':
+                        handledeliveryconfirmation(msg.DATA);
+                        break;
+                    case 'MESSAGE_QUEUED':
+                        handlemessagequeued(msg.DATA);
+                        break;
+                    case 'ERROR':
+                        handleerror(msg.DATA);
+                        break;
+                    case 'OFFLINE_MESSAGES':
+                        await handleofflinemessages(msg.DATA);
+                        break;
+                    case "USER_PUBLIC_KEY":
+                        await HANDLE_USER_PUBLIC_KEY(msg.DATA);
+                        break;
+                    case 'HEARTBEAT_ACK':
+                        break;
+                }
+            } catch (error) {
+                console.error('Message handling error:', error);
+            }
+        }
+
+        async function handlehandshake(data) {
+            const challenge = data.CHALLENGE;
+            session.sessionid = data.SESSION_ID;
+            
+            const serverpublickey = data.PUBLIC_KEY;
+            
+            const challengebuffer = base64ToArrayBuffer(challenge);
+            
+            const pemkey = serverpublickey.replace(/-----BEGIN PUBLIC KEY-----|-----END PUBLIC KEY-----|\n/g, '');
+            const binarykey = base64ToArrayBuffer(pemkey);
+            
+            const importedkey = await window.crypto.subtle.importKey(
+                "spki",
+                binarykey,
+                { name: "RSA-OAEP", hash: "SHA-256" },
+                true,
+                ["encrypt"]
+            );
+            
+            const encryptedchallenge = await window.crypto.subtle.encrypt(
+                { name: "RSA-OAEP" },
+                importedkey,
+                challengebuffer
+            );
+            
+            sendmessage('HANDSHAKE_RESPONSE', {
+                CHALLENGE_RESPONSE: arrayBufferToBase64(encryptedchallenge),
+                PEER_PUBLIC_KEY: publickeytopem(session.publickey),
+                PEER_ID: session.peerid,
+                USERNAME: usernameinput.value.trim()
+            });
+        }
+
+        function handleauthenticated(data) {
+            session.userid = data.USER_ID;
+            session.username = data.USERNAME;
+            
+            loginscreen.classList.add('hidden');
+            chatscreen.classList.remove('hidden');
+            
+            currentusername.textContent = session.username;
+            currentuserid.textContent = session.userid;
+            
+            sendmessage('GET_OFFLINE_MESSAGES', {});
+            
+            setInterval(() => {
+                sendmessage('HEARTBEAT', {});
+            }, 30000);
+        }
+
+        async function handleincomingmessage(data) {
+            try {
+                console.log('Incoming message data:', data);
+                
+                const senderid = data.SENDER_USER_ID || data.SENDER_ID;
+                const senderpublickey = data.SENDER_PUBLIC_KEY;
+                
+                if (senderpublickey && !recipientkeys[senderid]) {
+                    recipientkeys[senderid] = senderpublickey;
+                    console.log('Saved sender public key for:', senderid);
+                }
+                
+                if (!chats[senderid]) {
+                    chats[senderid] = [];
+                }
+                
+                const encryptedpackage = JSON.parse(data.ENCRYPTED_PACKAGE);
+                console.log('Encrypted package:', encryptedpackage);
+                
+                const decryptedmessage = await decryptmessage(encryptedpackage);
+                console.log('Decrypted message:', decryptedmessage);
+                
+                addmessagetochat(senderid, decryptedmessage, false, Date.now());
+                
+                sendmessage('ACKNOWLEDGMENT', {
+                    MESSAGE_ID: data.MESSAGE_ID,
+                    NONCE: data.NONCE,
+                    ORIGINAL_SENDER_ID: senderid,
+                    STATUS: 'read'
+                });
+            } catch (error) {
+                console.error('Error handling incoming message:', error);
+                messagestatus.textContent = 'Failed to decrypt message';
+                messagestatus.className = 'mt-2 text-xs text-red-400 text-center';
+            }
+        }
+
+        function handledeliveryconfirmation(data) {
+            messagestatus.textContent = 'Message delivered';
+            setTimeout(() => {
+                messagestatus.textContent = '';
+            }, 3000);
+        }
+
+        function handlemessagequeued(data) {
+            messagestatus.textContent = 'Message queued (recipient offline)';
+            setTimeout(() => {
+                messagestatus.textContent = '';
+            }, 3000);
+        }
+
+        function handleerror(data) {
+            console.error('Server error:', data);
+            messagestatus.textContent = `Error: ${data.MESSAGE}`;
+            messagestatus.className = 'mt-2 text-xs text-red-400 text-center';
+            setTimeout(() => {
+                messagestatus.textContent = '';
+                messagestatus.className = 'mt-2 text-xs text-slate-400 text-center';
+            }, 5000);
+        }
+
+        async function handleofflinemessages(data) {
+            if (data.COUNT > 0) {
+                console.log('Processing', data.COUNT, 'offline messages');
+                for (const msg of data.MESSAGES) {
+                    try {
+                        const encryptedpackage = JSON.parse(msg.ENCRYPTED_CONTENT);
+                        const decryptedmessage = await decryptmessage(encryptedpackage);
+                        addmessagetochat(msg.SENDER_ID, decryptedmessage, false, msg.TIMESTAMP);
+                    } catch (error) {
+                        console.error('Error decrypting offline message:', error);
+                    }
+                }
+            }
+        }
+
+        connectbtn.onclick = async () => {
+            const username = usernameinput.value.trim();
+            const serverurl = serverinput.value.trim();
+            
+            if (!username || username.length < 3 || username.length > 32) {
+                showstatus('Username must be between 3 and 32 characters', true);
+                return;
+            }
+            
+            if (!serverurl) {
+                showstatus('Please enter a server URL', true);
+                return;
+            }
+            
+            try {
+                connectbtn.disabled = true;
+                showstatus('Generating encryption keys...');
+                
+                await generatekeypair();
+                
+                showstatus('Connecting to server...');
+                
+                websocket = new WebSocket(serverurl);
+                
+                websocket.onopen = () => {
+                    showstatus('Connected! Authenticating...');
+                    sendmessage('HANDSHAKE_REQUEST', {});
+                };
+                
+                websocket.onmessage = handlemessage;
+                
+                websocket.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    showstatus('Connection error', true);
+                    connectbtn.disabled = false;
+                };
+                
+                websocket.onclose = () => {
+                    showstatus('Connection closed', true);
+                    connectbtn.disabled = false;
+                    chatscreen.classList.add('hidden');
+                    loginscreen.classList.remove('hidden');
+                };
+                
+            } catch (error) {
+                console.error('Connection error:', error);
+                showstatus('Failed to connect: ' + error.message, true);
+                connectbtn.disabled = false;
+            }
+        };
+
+        startchatbtn.onclick = () => {
+            const recipientid = recipientidinput.value.trim();
+            
+            if (!recipientid) {
+                return;
+            }
+            
+            if (!chats[recipientid]) {
+                chats[recipientid] = [];
+            }
+            sendmessage("GET_USER_PUBLIC", { USER_ID: recipientid });
+            selectchat(recipientid);
+            recipientidinput.value = '';
+        };
+
+        async function sendchatmessage() {
+            const message = messageinput.value.trim();
+            
+            if (!message || !currentrecipient) {
+                return;
+            }
+            
+            try {
+                sendbtn.disabled = true;
+                messagestatus.textContent = 'Checking recipient key...';
+                
+                const recipientpublickey = recipientkeys[currentrecipient];
+                
+                if (!recipientpublickey) {
+                    messagestatus.textContent = 'Warning: Recipient public key not available. They need to send you a message first.';
+                    messagestatus.className = 'mt-2 text-xs text-yellow-400 text-center';
+                    sendbtn.disabled = false;
+                    setTimeout(() => {
+                        messagestatus.textContent = '';
+                        messagestatus.className = 'mt-2 text-xs text-slate-400 text-center';
+                    }, 5000);
+                    return;
+                }
+                
+                messagestatus.textContent = 'Encrypting...';
+                console.log('Encrypting message with recipient key');
+                
+                const encryptedpackage = await encryptmessage(message, recipientpublickey);
+                
+                messagestatus.textContent = 'Sending...';
+                
+                const nonce = arrayBufferToHex(window.crypto.getRandomValues(new Uint8Array(16)));
+                
+                sendmessage('MESSAGE', {
+                    RECIPIENT_ID: currentrecipient,
+                    ENCRYPTED_PACKAGE: JSON.stringify(encryptedpackage),
+                    NONCE: nonce
+                });
+                
+                addmessagetochat(currentrecipient, message, true, Date.now());
+                
+                messageinput.value = '';
+                sendbtn.disabled = false;
+                messagestatus.textContent = '';
+                
+            } catch (error) {
+                console.error('Error sending message:', error);
+                messagestatus.textContent = 'Failed to send: ' + error.message;
+                messagestatus.className = 'mt-2 text-xs text-red-400 text-center';
+                sendbtn.disabled = false;
+            }
+        }
+
+        sendbtn.onclick = sendchatmessage;
+        
+        messageinput.onkeypress = (e) => {
+            if (e.key === 'Enter' && !sendbtn.disabled) {
+                sendchatmessage();
+            }
+        };
+
+        disconnectbtn.onclick = () => {
+            if (websocket) {
+                websocket.close();
+            }
+        };
+    </script>
+</body>
+</html>
