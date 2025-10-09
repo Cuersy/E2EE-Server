@@ -2,7 +2,7 @@
  * @Author: Cuersy 
  * @Date: 2025-10-03 18:23:22 
  * @Last Modified by: Cuersy
- * @Last Modified time: 2025-10-03 20:10:10
+ * @Last Modified time: 2025-10-03 20:33:30
  */
 
 
@@ -20,7 +20,7 @@ const {
 } = require('./models/dbHelpers');
 const { HANDLE_USER_AUTH } = require('./models/authHelpers');
 
-const MONGO_URI = process.env.MONGO_URI || 'idk';
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/e2ee_chat';
 const PORT = process.env.PORT || 8080;
 const SESSION_TIMEOUT = 3600000;
 const MESSAGE_TIMEOUT = 300000;

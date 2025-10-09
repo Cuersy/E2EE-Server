@@ -29,7 +29,7 @@
         }
     </style>
 </head>
-<body class="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 min-h-screen">
+<body class="bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 min-h-screen">
     <div id="app" class="container mx-auto px-4 py-8 max-w-6xl">
         <div id="loginScreen" class="flex items-center justify-center min-h-screen">
             <div class="bg-slate-800/50 backdrop-blur-lg rounded-2xl shadow-2xl p-8 w-full max-w-md border border-slate-700">
@@ -42,19 +42,19 @@
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-2">Username</label>
                         <input type="text" id="usernameInput" 
-                            class="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            class="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             placeholder="Enter your username" minlength="3" maxlength="32">
                     </div>
                     
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-2">WebSocket Server</label>
                         <input type="text" id="serverInput" 
-                            class="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            class="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             value="ws://localhost:8080" placeholder="ws://localhost:8080">
                     </div>
                     
                     <button id="connectBtn" 
-                        class="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-slate-800">
+                        class="w-full bg-gradient-to-r from-blue-600 to-blue-600 hover:from-blue-700 hover:to-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-800">
                         Connect
                     </button>
                 </div>
@@ -84,10 +84,10 @@
                         <h3 class="text-lg font-semibold text-white mb-3">New Chat</h3>
                         <div class="space-y-2">
                             <input type="text" id="recipientIdInput" 
-                                class="w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                class="w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 placeholder="Recipient User ID">
                             <button id="startChatBtn" 
-                                class="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg transition-colors">
+                                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors">
                                 Start Chat
                             </button>
                         </div>
@@ -116,10 +116,10 @@
                     <div class="p-6 border-t border-slate-700">
                         <div class="flex space-x-3">
                             <input type="text" id="messageInput" 
-                                class="flex-1 px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                class="flex-1 px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 placeholder="Type a message..." disabled>
                             <button id="sendBtn" 
-                                class="bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 disabled>
                                 Send
                             </button>
@@ -135,8 +135,8 @@
         /*
  * @Author: Cuersy 
  * @Date: 2025-10-03 18:24:15 
- * @Last Modified by:   Cuersy 
- * @Last Modified time: 2025-10-03 18:24:15 
+ * @Last Modified by: Cuersy
+ * @Last Modified time: 2025-10-03 20:46:08
  */
         let websocket = null;
         let session = {
@@ -341,7 +341,7 @@
                 const bubble = document.createElement('div');
                 bubble.className = `max-w-xs lg:max-w-md px-4 py-3 rounded-2xl ${
                     msg.issent 
-                        ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white' 
+                        ? 'bg-gradient-to-r from-blue-600 to-blue-600 text-white' 
                         : 'bg-slate-700 text-white'
                 }`;
                 
@@ -368,7 +368,7 @@
                 const chatbutton = document.createElement('button');
                 chatbutton.className = `w-full text-left px-4 py-3 rounded-lg transition-colors ${
                     currentrecipient === recipientid 
-                        ? 'bg-purple-600 text-white' 
+                        ? 'bg-blue-600 text-white' 
                         : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
                 }`;
                 
