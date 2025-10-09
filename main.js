@@ -1,3 +1,9 @@
+/*
+ * @Author: Cuersy 
+ * @Date: 2025-10-09 21:56:17 
+ * @Last Modified by:   Cuersy 
+ * @Last Modified time: 2025-10-09 21:56:17 
+ */
 const WEBSOCKET_MODULE = require("ws");
 const CRYPTO = require("crypto");
 const MONGOOSE = require("mongoose");
