@@ -1,7 +1,7 @@
 const WEBSOCKET_MODULE = require("ws");
 const CRYPTO = require("crypto");
 const MONGOOSE = require("mongoose");
-
+require("dotenv").config();  
 const { 
     SAVE_MESSAGE_TO_DATABASE, 
     UPDATE_MESSAGE_STATUS, 
